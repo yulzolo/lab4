@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <stdlib.h> //функции для работы с динамической памятью (malloc, free)
+#include <string.h> //функции для работы с динамической памятью (malloc, free)
+
+// структура узла списка
+typedef struct list_item {
+    char *data;
+    struct list_item *next;
+    struct list_item *prev;
+} list_item;
+
+// структура самого списка
+typedef struct list {
+    int count;
+    list_item *head;
+    list_item *tail;
+} list;
+
+// функция создания пустого списка
+list* create_list() {
+    list *lst = (list*)malloc(sizeof(list));
+    lst->count = 0;
+    lst->head = NULL;
+    lst->tail = NULL;
+    return lst;
+}
+
+// функция добавления элемента в список
+void insert_list(list *lst, int index, char *data) {
+    list_item *new_item = (list_item*)malloc(sizeof(list_item));
+    new_item->data = (char*)malloc(strlen(data) + 1);
+    strcpy(new_item->data, data);
+    new_item->next = NULL;
+    new_item->prev = NULL;
+
+    if (lst->head == NULL) { // список пустой
+        lst->head = new_item;
+        lst->tail = new_item;
+    } else if (index == 0) { // вставка в начало
+        new_item->next = lst->head;
+        lst->head->prev = new_item;
+        lst->head = new_item;
+    } else if (index >= lst->count) { // вставка в конец
+        new_item->prev = lst->tail;
+        lst->tail->next = new_item;
+        lst->tail = new_item;
+    } else { // вставка в середину
+        list_item *current = lst->head;
+        for (int i = 0; i < index; i++) {
+            current = current->next;
+        }
+        new_item->next = current;
+        new_item->prev = current->prev;
+        if (current->prev != NULL) {
+            current->prev->next = new_item;
+        }
+        current->prev = new_item;
+    }
+
+    lst->count++;
+    printf("Добавлен элемент: %s\n", data);
+}
+
+// функция удаления элемента по индексу
+void delete_item(list *lst, int index) {
+    if (lst->head == NULL) {
+        printf("Список пуст, удалять нечего.\n");
+        return;
+    }
+
+    list_item *current = lst->head;
+    if (index == 0) { // удаление головы
+        lst->head = current->next;
+        if (lst->head != NULL) {
+            lst->head->prev = NULL;
+        } else {
+            lst->tail = NULL; // список стал пустым
+        }
+    } else if (index >= lst->count - 1) { // удаление хвоста
+        current = lst->tail;
+        lst->tail = current->prev;
+        lst->tail->next = NULL;
+    } else { // удаление из середины
+        for (int i = 0; i < index; i++) {
+            current = current->next;
+        }
+        current->prev->next = current->next;
+        current->next->prev = current->prev;
+    }
+
+    free(current->data);
+    free(current);
+    lst->count--;
+}
+
+// функция вывода списка
+void print_list(list *lst) {
+    printf("Список (%d элементов):\n", lst->count);
+    list_item *current = lst->head;
+    int i = 0;
+    while (current != NULL) {
+        printf("%d: %s\n", i, current->data);
+        current = current->next;
+        i++;
+    }
+}
+
+// функция очистки списка
+void free_list(list *lst) {
+    while (lst->head != NULL) {
+        delete_item(lst, 0);
+    }
+    free(lst);
+}
+
+// меню для работы с пользователем
+int menu() {
+    const char *items[] = {"Добавить элемент", "Удалить элемент", "Показать список", "Выход"};
+    int count = 4;
+    int pos = 0;
+    int choice = -1;
+
+    while (1) {
+        printf("\nИспользуйте цифры 1-%d для выбора пункта:\n", count);
+        for (int i = 0; i < count; i++) {
+            if (i == pos) {
+                printf("> %s\n", items[i]);
+            } else {
+                printf("  %s\n", items[i]);
+            }
+        }
+
+        printf("Выбор: ");
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n'); // очищаем буфер
+            continue;
+        }
+
+        if (choice >= 1 && choice <= count) {
+            return choice - 1; // возвращаем индекс пункта
+        } else {
+            printf("Некорректный выбор, попробуйте снова.\n");
+        }
+    }
+}
+
+int main() {
+    list *lst = create_list();
+    int running = 1;
+
+    while (running) {
+        int choice = menu();
+        if (choice == 0) { // добавить элемент
+            char buffer[100];
+            printf("Введите данные: ");
+            scanf("%s", buffer);
+            insert_list(lst, lst->count, buffer);
+        } else if (choice == 1) { // удалить элемент
+            int index;
+            printf("Введите индекс для удаления: ");
+            scanf("%d", &index);
+            delete_item(lst, index);
+        } else if (choice == 2) { // показать список
+            print_list(lst);
+        } else if (choice == 3) { // выход
+            running = 0;
+        }
+    }
+
+    free_list(lst);
+    return 0;
+}
